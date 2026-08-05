@@ -1,0 +1,106 @@
+// Prisma Schema for RailPulse AI
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ReportType {
+  CROWD
+  CLEANLINESS
+  FOOD
+  SECURITY
+  DELAY
+  PLATFORM_CHANGE
+}
+
+enum CrowdLevel {
+  LOW
+  MODERATE
+  HEAVY
+  PACKED
+}
+
+model User {
+  id            String fontId    @id @default(uuid())
+  email         String            @unique
+  name          String?
+  passwordHash  String?
+  role          Role              @default(USER)
+  avatarUrl     String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  bookmarks     Bookmark[]
+  reports       CommunityReport[]
+  searches      RecentSearch[]
+}
+
+model Train {
+  id             String      @id @default(uuid())
+  number         String      @unique
+  name           String
+  originCode     String
+  originName     String
+  destCode       String
+  destName       String
+  category       String      @default("Superfast")
+  avgSpeedKmh    Int         @default(110)
+  totalDistance  Int         @default(1000)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  bookmarks      Bookmark[]
+  reports        CommunityReport[]
+}
+
+model Station {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  lat       Float
+  lng       Float
+  state     String?
+  zone      String?
+  createdAt DateTime @default(now())
+}
+
+model Bookmark {
+  id        String   @id @default(uuid())
+  userId    String
+  trainId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  train     Train    @relation(fields: [trainId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, trainId])
+}
+
+model CommunityReport {
+  id          String     @id @default(uuid())
+  userId      String
+  trainNumber String
+  type        ReportType
+  crowdLevel  CrowdLevel?
+  comment     String?
+  rating      Int?       @default(5)
+  upvotes     Int        @default(0)
+  createdAt   DateTime   @default(now())
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  train       Train?     @relation(fields: [trainNumber], references: [number], onDelete: SetNull)
+}
+
+model RecentSearch {
+  id          String   @id @default(uuid())
+  userId      String
+  query       String
+  trainNumber String?
+  searchedAt  DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
